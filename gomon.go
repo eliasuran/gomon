@@ -44,24 +44,25 @@ func main() {
 	// setter sjekkingen om programmet har startet til false rett før det starter (TODO: legge til at den faktisk listener om programmet startet ordenlig)
 	running <- false
 
-	go changeListener(file + "main.go")
+	// listener som sjekker for endringer i fila
+	go changeListener(file+"main.go", running)
 
 	err := cmd.Run()
 	lib.HandleErr("Error executing command, ", err)
 
-	// TODO: listener som sjekker for endringer i fila
 }
 
-func changeListener(filePath string) {
+func changeListener(filePath string, running <-chan bool) {
 	initialStat, err := os.Stat(filePath)
 	lib.HandleErr("Failed to read initial file stats: ", err)
 
 	for {
 		stat, err := os.Stat(filePath)
-		lib.HandleErr("Failed to reat file stats: ", err)
+		lib.HandleErr("Failed to read file stats: ", err)
 
 		if stat.Size() != initialStat.Size() {
 			fmt.Println("Change in file")
+			initialStat = stat
 		}
 
 		time.Sleep(1 * time.Second)

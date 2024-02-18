@@ -7,7 +7,6 @@ import (
 )
 
 func main() {
-	fmt.Println("hello")
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
