@@ -14,7 +14,7 @@ func main() {
 			http.NotFound(w, req)
 			return
 		}
-		fmt.Fprintf(w, "Hello !")
+		fmt.Fprintf(w, "Hello world!")
 	})
 
 	port := "3000"

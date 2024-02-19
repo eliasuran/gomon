@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/eliasuran/gomon/lib"
@@ -36,12 +37,18 @@ func main() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	// initialiserer process var
+	serverProcess := &os.Process{Pid: -1}
+
 	// starter listener som sjekker for endringer i fila før programmet starter for første gang
-	go changeListener(file, cmd)
+	go changeListener(file, serverProcess)
 
 	// starter programmet og sjekker for en initial error i programmet
 	err := cmd.Run()
 	lib.HandleErr("Error starting http server: ", err)
+
+	// lagrer prosessen
+	serverProcess = cmd.Process
 }
 
 func response(status int, message string) {
@@ -53,7 +60,7 @@ func response(status int, message string) {
 	color.HiGreen("[ %d ] %s", status, message)
 }
 
-func changeListener(filePath string, cmd *exec.Cmd) {
+func changeListener(filePath string, serverProcess *os.Process) {
 	response(200, "Server started successfully!")
 	fullPath := filePath + "main.go"
 	initialStat, err := os.Stat(fullPath)
@@ -63,10 +70,17 @@ func changeListener(filePath string, cmd *exec.Cmd) {
 	} else {
 		for {
 			stat, err := os.Stat(fullPath)
-			lib.HandleErr("Failed to read file stats: ", err)
+			if err != nil {
+				response(400, "Error in for loop")
+				break
+			}
 
 			if stat.Size() != initialStat.Size() {
 				response(200, "Change in file, resarting server...")
+
+				err := serverProcess.Signal(syscall.SIGINT)
+				lib.HandleErr("Error stopping server:", err)
+
 				initialStat = stat
 			}
 
@@ -74,9 +88,6 @@ func changeListener(filePath string, cmd *exec.Cmd) {
 		}
 	}
 
-}
-
-func restartServer(filePath string, cmd *exec.Cmd) {
 }
 
 func getPath() string {
