@@ -28,45 +28,55 @@ func main() {
  ╚═════╝  ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ Made by eliasuran
 
 `)
-
-	// brukes for å displaye text som viser om programmet er i ferd med å starte eller har starta
-	running := make(chan bool)
-	go lib.Starting(running)
-
 	// hent path til filen som skal kjøres
 	file := getPath()
 
-	// gjør klar til at commanden for å kjøre programmet skal kjøres
+	// initialiserer command variabel
 	cmd := exec.Command("go", "run", file)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// setter sjekkingen om programmet har startet til false rett før det starter (TODO: legge til at den faktisk listener om programmet startet ordenlig)
-	running <- false
+	// starter listener som sjekker for endringer i fila før programmet starter for første gang
+	go changeListener(file, cmd)
 
-	// listener som sjekker for endringer i fila
-	go changeListener(file+"main.go", running)
-
+	// starter programmet og sjekker for en initial error i programmet
 	err := cmd.Run()
-	lib.HandleErr("Error executing command, ", err)
+	lib.HandleErr("Error starting http server: ", err)
+}
+
+func response(status int, message string) {
+	if status == 400 {
+		color.HiRed("[ %d ] %s", status, message)
+		return
+	}
+
+	color.HiGreen("[ %d ] %s", status, message)
+}
+
+func changeListener(filePath string, cmd *exec.Cmd) {
+	response(200, "Server started successfully!")
+	fullPath := filePath + "main.go"
+	initialStat, err := os.Stat(fullPath)
+
+	if err != nil {
+		response(400, "Error doing something")
+	} else {
+		for {
+			stat, err := os.Stat(fullPath)
+			lib.HandleErr("Failed to read file stats: ", err)
+
+			if stat.Size() != initialStat.Size() {
+				response(200, "Change in file, resarting server...")
+				initialStat = stat
+			}
+
+			time.Sleep(1 * time.Second)
+		}
+	}
 
 }
 
-func changeListener(filePath string, running <-chan bool) {
-	initialStat, err := os.Stat(filePath)
-	lib.HandleErr("Failed to read initial file stats: ", err)
-
-	for {
-		stat, err := os.Stat(filePath)
-		lib.HandleErr("Failed to read file stats: ", err)
-
-		if stat.Size() != initialStat.Size() {
-			fmt.Println("Change in file")
-			initialStat = stat
-		}
-
-		time.Sleep(1 * time.Second)
-	}
+func restartServer(filePath string, cmd *exec.Cmd) {
 }
 
 func getPath() string {
