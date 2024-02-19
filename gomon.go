@@ -41,13 +41,13 @@ func main() {
 	serverProcess := &os.Process{Pid: -1}
 
 	// starter listener som sjekker for endringer i fila før programmet starter for første gang
-	go changeListener(file, serverProcess)
+	go changeListener(file, serverProcess, cmd)
 
 	// starter programmet og sjekker for en initial error i programmet
 	err := cmd.Run()
 	lib.HandleErr("Error starting http server: ", err)
 
-	// lagrer prosessen
+	// lagrer prosessen (dette funker ikke :[)
 	serverProcess = cmd.Process
 }
 
@@ -60,28 +60,41 @@ func response(status int, message string) {
 	color.HiGreen("[ %d ] %s", status, message)
 }
 
-func changeListener(filePath string, serverProcess *os.Process) {
+func changeListener(filePath string, serverProcess *os.Process, cmd *exec.Cmd) {
 	response(200, "Server started successfully!")
 	fullPath := filePath + "main.go"
 	initialStat, err := os.Stat(fullPath)
 
 	if err != nil {
 		response(400, "Error doing something")
+		fmt.Println(err)
 	} else {
 		for {
 			stat, err := os.Stat(fullPath)
 			if err != nil {
-				response(400, "Error in for loop")
+				response(400, "Error in code, pls fix")
 				break
 			}
 
-			if stat.Size() != initialStat.Size() {
+			if stat.ModTime() != initialStat.ModTime() {
 				response(200, "Change in file, resarting server...")
 
-				err := serverProcess.Signal(syscall.SIGINT)
-				lib.HandleErr("Error stopping server:", err)
+				err = serverProcess.Signal(syscall.SIGINT)
+				if err != nil {
+					response(400, "Error when killing previous process")
+					fmt.Println(err)
+				}
+
+				err = cmd.Run()
+				if err != nil {
+					response(400, "Error when starting up again: ")
+					fmt.Println(err)
+				}
+
+				serverProcess = cmd.Process
 
 				initialStat = stat
+				response(200, "Sucessfully updated")
 			}
 
 			time.Sleep(1 * time.Second)
