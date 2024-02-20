@@ -8,13 +8,13 @@ import (
 
 func main() {
 	mux := http.NewServeMux()
-	k
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		if req.URL.Path != "/" {
 			http.NotFound(w, req)
 			return
 		}
-		fmt.Fprintf(w, "Hello dwdw!")
+		fmt.Fprintf(w, "Hello world!")
 	})
 
 	port := "3000"
