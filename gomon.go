@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -32,23 +33,31 @@ func main() {
 	// hent path til filen som skal kjøres
 	file := getPath()
 
+	// starter server og returnerer cmd sum bruker til å interacte ned cmd
+	cmd := startServer(file)
+
+	// initialiserer en var for prosessen til commanden som kjører
+	serverProcess := cmd.Process
+
+	// starter listener som sjekker for endringer i fila før programmet starter for første gang
+	changeListener(file, serverProcess)
+}
+
+func startServer(file string) *exec.Cmd {
 	// initialiserer command variabel
 	cmd := exec.Command("go", "run", file)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// initialiserer process var
-	serverProcess := &os.Process{Pid: -1}
-
-	// starter listener som sjekker for endringer i fila før programmet starter for første gang
-	go changeListener(file, serverProcess, cmd)
-
 	// starter programmet og sjekker for en initial error i programmet
-	err := cmd.Run()
+	err := cmd.Start()
 	lib.HandleErr("Error starting http server: ", err)
 
-	// lagrer prosessen (dette funker ikke :[)
-	serverProcess = cmd.Process
+	// gir response om at serveren har startet
+	response(200, "Server started successfully!")
+
+	// returnerer cmd
+	return cmd
 }
 
 func response(status int, message string) {
@@ -60,9 +69,8 @@ func response(status int, message string) {
 	color.HiGreen("[ %d ] %s", status, message)
 }
 
-func changeListener(filePath string, serverProcess *os.Process, cmd *exec.Cmd) {
-	response(200, "Server started successfully!")
-	fullPath := filePath + "main.go"
+func changeListener(filePath string, serverProcess *os.Process) {
+	fullPath := filepath.Join(filePath, "main.go")
 	initialStat, err := os.Stat(fullPath)
 
 	if err != nil {
@@ -79,17 +87,16 @@ func changeListener(filePath string, serverProcess *os.Process, cmd *exec.Cmd) {
 			if stat.ModTime() != initialStat.ModTime() {
 				response(200, "Change in file, resarting server...")
 
-				err = serverProcess.Signal(syscall.SIGINT)
-				if err != nil {
-					response(400, "Error when killing previous process")
-					fmt.Println(err)
+				if serverProcess != nil {
+					err = serverProcess.Signal(syscall.SIGTERM)
+					if err != nil {
+						response(400, "Error when killing previous process")
+						fmt.Println(err)
+					}
+					serverProcess.Wait()
 				}
 
-				err = cmd.Run()
-				if err != nil {
-					response(400, "Error when starting up again: ")
-					fmt.Println(err)
-				}
+				cmd := startServer(filePath)
 
 				serverProcess = cmd.Process
 
