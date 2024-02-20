@@ -1,0 +1,13 @@
+name: Latest tag
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  latest-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Latest Tag
+        uses: eliasuran/actions/latest@master

@@ -87,8 +87,7 @@ func changeListener(filePath string, process *os.Process) {
 	initialStat, err := os.Stat(fullPath)
 
 	if err != nil {
-		response(400, "Error doing something")
-		fmt.Println(err)
+		response(400, "Error doing something: "+err.Error())
 	} else {
 		for {
 			stat, err := os.Stat(fullPath)
@@ -103,8 +102,7 @@ func changeListener(filePath string, process *os.Process) {
 				if process != nil {
 					err = process.Signal(syscall.SIGTERM)
 					if err != nil {
-						response(400, "Error when killing previous process")
-						fmt.Println(err)
+						response(400, "Error when killing previous process: "+err.Error())
 					}
 					process.Wait()
 				}
