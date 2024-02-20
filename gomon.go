@@ -33,43 +33,56 @@ func main() {
 	// hent path til filen som skal kjøres
 	file := getPath()
 
-	// starter server og returnerer cmd sum bruker til å interacte ned cmd
-	cmd := startServer(file)
-
-	// initialiserer en var for prosessen til commanden som kjører
-	serverProcess := cmd.Process
-
-	// starter listener som sjekker for endringer i fila før programmet starter for første gang
-	changeListener(file, serverProcess)
-}
-
-func startServer(file string) *exec.Cmd {
-	// initialiserer command variabel
-	cmd := exec.Command("go", "run", file)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	// starter programmet og sjekker for en initial error i programmet
-	err := cmd.Start()
-	lib.HandleErr("Error starting http server: ", err)
+	// starter server og får prosessen til serveren som bruker til å interacte serveren som kjører
+	process := startServer(file)
 
 	// gir response om at serveren har startet
 	response(200, "Server started successfully!")
 
-	// returnerer cmd
-	return cmd
+	// starter listener som sjekker for endringer i fila før programmet starter for første gang
+	changeListener(file, process)
+}
+
+func startServer(file string) *os.Process {
+	// initialiserer go build cmd
+	cmd := exec.Command("go", "build", "-o", filepath.Join(file, "server"), file)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// kjører build commanden
+	err := cmd.Run()
+	if err != nil {
+		response(400, "Error building program: "+err.Error())
+	}
+
+	// kjører executablen som ble laget
+	cmd = exec.Command(file + "/server")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Start()
+	if err != nil {
+		response(400, "Error starting server: "+err.Error())
+	}
+
+	// lagrer prosessen i en variabel, dette gjør at jeg slipper å returnere cmd siden dette er det eneste den brukes til (for nå)
+	process := cmd.Process
+
+	// returnerer prosessen
+	return process
 }
 
 func response(status int, message string) {
+	t := time.Now().Format("15:04:05")
+	formatting := "%s | [ %d ] %s"
 	if status == 400 {
-		color.HiRed("[ %d ] %s", status, message)
+		color.Red(formatting, t, status, message)
 		return
 	}
 
-	color.HiGreen("[ %d ] %s", status, message)
+	color.Green(formatting, t, status, message)
 }
 
-func changeListener(filePath string, serverProcess *os.Process) {
+func changeListener(filePath string, process *os.Process) {
 	fullPath := filepath.Join(filePath, "main.go")
 	initialStat, err := os.Stat(fullPath)
 
@@ -87,18 +100,16 @@ func changeListener(filePath string, serverProcess *os.Process) {
 			if stat.ModTime() != initialStat.ModTime() {
 				response(200, "Change in file, resarting server...")
 
-				if serverProcess != nil {
-					err = serverProcess.Signal(syscall.SIGTERM)
+				if process != nil {
+					err = process.Signal(syscall.SIGTERM)
 					if err != nil {
 						response(400, "Error when killing previous process")
 						fmt.Println(err)
 					}
-					serverProcess.Wait()
+					process.Wait()
 				}
 
-				cmd := startServer(filePath)
-
-				serverProcess = cmd.Process
+				process = startServer(filePath)
 
 				initialStat = stat
 				response(200, "Sucessfully updated")
