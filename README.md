@@ -14,8 +14,41 @@
 
 ---
 
-## Usage (not working yet)
+## Preview
+
+* Automatic updates when making changes to your api 🚀
+
+* Built for the net/http standard package 🔥
+
+
+
+## Installation
+
+### Homebrew (in progress)
+
+### Manual installation
+
+```sh
+git clone https://github/eliasuran/gomon
+cd gomon
+go install
+```
+
+Run the program
+
+```sh
+gomon "path to dir with http server"
+```
+
+## Usage
 
 ```shell
-go run gomon "path/to/dir/with/main.go/file"
+gomon "path/to/dir/with/main.go/file"
 ```
+
+
+* Run gomon and point to a directory containing a main.go file (currently only works with main.go files, working on fix)
+
+* Gomon will build a binary and run it. When you make changes, it will automatically build a new binary with the latest changes.
+
+* If it encounters an error, it will stay on the latest working version until the error is resolved.
