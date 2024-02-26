@@ -29,7 +29,7 @@
 ### Manual installation
 
 ```sh
-git clone https://github/eliasuran/gomon
+git clone https://github/eliasuran/gomon@latest
 cd gomon
 go install
 ```
