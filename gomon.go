@@ -37,7 +37,7 @@ func main() {
 	process, err := startServer(file)
 	if err != nil {
 		// gir response om at en error var funnet i initial build
-		response(400, "Found error in server")
+		response(400, "Error building server"+err.Error())
 	} else {
 		// gir response om at serveren har startet
 		response(200, "Server started successfully!")
@@ -56,7 +56,6 @@ func startServer(file string) (*os.Process, error) {
 	// kjører build commanden
 	err := cmd.Run()
 	if err != nil {
-		response(400, "Error building program: "+err.Error())
 		return nil, err
 	}
 
@@ -66,7 +65,6 @@ func startServer(file string) (*os.Process, error) {
 	cmd.Stderr = os.Stderr
 	err = cmd.Start()
 	if err != nil {
-		response(400, "Error starting server: "+err.Error())
 		return nil, err
 	}
 
