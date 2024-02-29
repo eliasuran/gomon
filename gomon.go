@@ -104,21 +104,21 @@ func changeListener(filePath string, process *os.Process) {
 		if stat.ModTime() != initialStat.ModTime() {
 			response(200, "Change in file, resarting server...")
 
-			if process != nil {
-				go func() {
-					err = process.Signal(syscall.SIGTERM)
-					if err != nil {
-						response(400, "Error when killing previous process: "+err.Error())
-					}
-					process.Wait()
-				}()
-			}
+			go func() {
+				process, err = startServer(filePath)
+				if err != nil {
+					response(400, "Error starting server: "+err.Error())
+				} else {
+					response(200, "Sucessfully updated")
+				}
+			}()
 
-			process, err = startServer(filePath)
-			if err != nil {
-				response(400, "Error starting server: "+err.Error())
-			} else {
-				response(200, "Sucessfully updated")
+			if process != nil {
+				err = process.Signal(syscall.SIGTERM)
+				if err != nil {
+					response(400, "Error when killing previous process: "+err.Error())
+				}
+				process.Wait()
 			}
 
 			initialStat = stat
