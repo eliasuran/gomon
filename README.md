@@ -24,7 +24,12 @@
 
 ## Installation
 
-### Homebrew (in progress)
+### Homebrew 
+
+```sh
+brew tap eliasuran/apps
+brew install gomon
+```
 
 ### Manual installation
 
